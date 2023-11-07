@@ -534,7 +534,7 @@ double elapsed_seconds(void) {
 
 static inline void printEndStatistics() {
     if (simpleMetrics == 1) {
-        printf("%-9lli  %-9lli  %-9i  %-9i", flip, maxFlips, numClauses - bestNumFalse,
+        fprintf(stderr, "%-9lli  %-9lli  %-9i  %-9i", flip, maxFlips, numClauses - bestNumFalse,
                numClauses); // počet-iterací, max-počet-iterací, splněných klauzulí, všech klauzulí,
     } else {
         printf("\nc EndStatistics:\n");
