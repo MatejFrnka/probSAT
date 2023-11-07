@@ -96,17 +96,20 @@ long ticks_per_second;
 int bestNumFalse;
 //parameters flags - indicates if the parameters were set on the command line
 int cm_spec = 0, cb_spec = 0, fct_spec = 0, caching_spec = 0;
+int simpleMetrics = 0;
 
 inline int abs(int a) {
     return (a < 0) ? -a : a;
 }
 
 void printFormulaProperties() {
-    printf("\nc %-20s:  %s\n", "instance name", fileName);
-    printf("c %-20s:  %d\n", "number of variables", numVars);
-    printf("c %-20s:  %d\n", "number of literals", numLiterals);
-    printf("c %-20s:  %d\n", "number of clauses", numClauses);
-    printf("c %-20s:  %d\n", "max. clause length", maxClauseSize);
+    if (simpleMetrics == 0) {
+        printf("\nc %-20s:  %s\n", "instance name", fileName);
+        printf("c %-20s:  %d\n", "number of variables", numVars);
+        printf("c %-20s:  %d\n", "number of literals", numLiterals);
+        printf("c %-20s:  %d\n", "number of clauses", numClauses);
+        printf("c %-20s:  %d\n", "max. clause length", maxClauseSize);
+    }
 }
 
 void printProbs() {
@@ -125,31 +128,33 @@ void printProbs() {
 }
 
 void printSolverParameters() {
-    printf("\nc probSAT parameteres: \n");
-    printf("c %-20s: %-20s\n", "using:", "only break");
-    if (fct == 0)
-        printf("c %-20s: %-20s\n", "using:", "polynomial function");
-    else
-        printf("c %-20s: %-20s\n", "using:", "exponential function");
+    if (simpleMetrics == 0) {
+        printf("\nc probSAT parameteres: \n");
+        printf("c %-20s: %-20s\n", "using:", "only break");
+        if (fct == 0)
+            printf("c %-20s: %-20s\n", "using:", "polynomial function");
+        else
+            printf("c %-20s: %-20s\n", "using:", "exponential function");
 
-    printf("c %-20s: %6.6f\n", "cb", cb);
-    if (fct == 0) { //poly
-        printf("c %-20s: %-20s\n", "function:", "probsBreak[break]*probsMake[make] = pow((eps + break), -cb);");
-        printf("c %-20s: %6.6f\n", "eps", eps);
-    } else { //exp
-        printf("c %-20s: %-20s\n", "function:", "probsBreak[break]*probsMake[make] = pow(cb, -break);");
+        printf("c %-20s: %6.6f\n", "cb", cb);
+        if (fct == 0) { //poly
+            printf("c %-20s: %-20s\n", "function:", "probsBreak[break]*probsMake[make] = pow((eps + break), -cb);");
+            printf("c %-20s: %6.6f\n", "eps", eps);
+        } else { //exp
+            printf("c %-20s: %-20s\n", "function:", "probsBreak[break]*probsMake[make] = pow(cb, -break);");
+        }
+        if (caching)
+            printf("c %-20s: %-20s\n", "using:", "caching of break values");
+        else
+            printf("c %-20s: %-20s\n", "using:", "no caching of break values");
+        //printProbs();
+        printf("\nc general parameteres: \n");
+        printf("c %-20s: %lli\n", "maxTries", maxTries);
+        printf("c %-20s: %lli\n", "maxFlips", maxFlips);
+        printf("c %-20s: %lli\n", "seed", seed);
+        printf("c %-20s: \n", "-->Starting solver");
+        fflush(stdout);
     }
-    if (caching)
-        printf("c %-20s: %-20s\n", "using:", "caching of break values");
-    else
-        printf("c %-20s: %-20s\n", "using:", "no caching of break values");
-    //printProbs();
-    printf("\nc general parameteres: \n");
-    printf("c %-20s: %lli\n", "maxTries", maxTries);
-    printf("c %-20s: %lli\n", "maxFlips", maxFlips);
-    printf("c %-20s: %lli\n", "seed", seed);
-    printf("c %-20s: \n", "-->Starting solver");
-    fflush(stdout);
 }
 
 void printSolution() {
@@ -528,12 +533,17 @@ double elapsed_seconds(void) {
 }
 
 static inline void printEndStatistics() {
-    printf("\nc EndStatistics:\n");
-    printf("c %-30s: %-9lli\n", "numFlips", flip);
-    printf("c %-30s: %-8.2f\n", "avg. flips/variable", (double) flip / (double) numVars);
-    printf("c %-30s: %-8.2f\n", "avg. flips/clause", (double) flip / (double) numClauses);
-    printf("c %-30s: %-8.0f\n", "flips/sec", (double) flip / tryTime);
-    printf("c %-30s: %-8.4f\n", "CPU Time", tryTime);
+    if (simpleMetrics == 1) {
+        printf("%-9lli  %-9lli  %-9i  %-9i", flip, maxFlips, numClauses - bestNumFalse,
+               numClauses); // počet-iterací, max-počet-iterací, splněných klauzulí, všech klauzulí,
+    } else {
+        printf("\nc EndStatistics:\n");
+        printf("c %-30s: %-9lli\n", "numFlips", flip);
+        printf("c %-30s: %-8.2f\n", "avg. flips/variable", (double) flip / (double) numVars);
+        printf("c %-30s: %-8.2f\n", "avg. flips/clause", (double) flip / (double) numClauses);
+        printf("c %-30s: %-8.0f\n", "flips/sec", (double) flip / tryTime);
+        printf("c %-30s: %-8.4f\n", "CPU Time", tryTime);
+    }
 }
 
 static inline void printUsage() {
@@ -556,7 +566,7 @@ static inline void printUsage() {
     printf("--runs <int_value>, -r<int_value>  : maximum number of tries \n");
     printf("--maxflips <int_value> , -m<int_value>: number of flips per try \n");
     printf("--printSolution, -a : output assignment\n");
-    printf("--log: display run statistics\n");
+    printf("--simpleMetrics, -s: only display iteration count, max iteration count, satisfied variables , all variables\n");
     printf("--help, -h : output this help\n");
     printf("----------------------------------------------------------\n\n");
 }
@@ -587,13 +597,14 @@ void parseParameters(int argc, char *argv[]) {
              {"runs",          required_argument, 0, 't'},
              {"maxflips",      required_argument, 0, 'm'},
              {"printSolution", no_argument,       0, 'a'},
+             {"simpleMetrics", no_argument,       0, 's'},
              {"help",          no_argument,       0, 'h'},
              {0, 0,                               0, 0}};
 
     while (optind < argc) {
         int index = -1;
         struct option *opt = 0;
-        int result = getopt_long(argc, argv, "f:e:c:b:t:m:ah", long_options, &index); //
+        int result = getopt_long(argc, argv, "f:e:c:b:t:m:ash", long_options, &index); //
         if (result == -1)
             break; /* end of list */
         switch (result) {
@@ -628,6 +639,9 @@ void parseParameters(int argc, char *argv[]) {
                 break;
             case 'a': //print assignment for variables at the end
                 printSol = 1;
+                break;
+            case 's':
+                simpleMetrics = 1;
                 break;
             case 0: /* all parameter that do not */
                 /* appear in the optstring */
@@ -748,13 +762,18 @@ int main(int argc, char *argv[]) {
                 return 0;
             } else {
                 printEndStatistics();
-                printf("s SATISFIABLE\n");
+                if (simpleMetrics == 0) {
+                    printf("s SATISFIABLE\n");
+                }
                 if (printSol == 1)
                     printSolution();
                 return 10;
             }
-        } else
-            printf("c UNKNOWN best(%4d) current(%4d) (%-15.5fsec)\n", bestNumFalse, numFalse, tryTime);
+        } else {
+            if (simpleMetrics == 0) {
+                printf("c UNKNOWN best(%4d) current(%4d) (%-15.5fsec)\n", bestNumFalse, numFalse, tryTime);
+            }
+        }
     }
     printEndStatistics();
     if (maxTries > 1)
